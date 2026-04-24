@@ -1,0 +1,143 @@
+-- VORTEX HUNTER V8.4 (SHIELD + RADAR + TAG)
+local ScreenGui = Instance.new("ScreenGui")
+local MainFrame = Instance.new("Frame")
+local Title = Instance.new("TextLabel")
+local NameInput = Instance.new("TextBox")
+local TagBtn = Instance.new("TextButton")
+local RadarBtn = Instance.new("TextButton")
+local BypassBtn = Instance.new("TextButton")
+local FlyBtn = Instance.new("TextButton")
+local ListFrame = Instance.new("ScrollingFrame")
+local ClearBtn = Instance.new("TextButton")
+
+-- [ SETUP DA INTERFACE ]
+ScreenGui.Parent = game.CoreGui
+MainFrame.Name = "VortexV8_4"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+MainFrame.BorderSizePixel = 2
+MainFrame.BorderColor3 = Color3.fromRGB(138, 43, 226)
+MainFrame.Size = UDim2.new(0, 260, 0, 520)
+MainFrame.Position = UDim2.new(0.5, -130, 0.2, 0)
+MainFrame.Active = true
+MainFrame.Draggable = true
+
+Title.Parent = MainFrame
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.Text = "VORTEX V8.4: HUNTER"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
+Title.Font = Enum.Font.SourceSansBold
+Title.TextSize = 20
+
+local function styleBtn(btn, color)
+    btn.BackgroundColor3 = color
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Font = Enum.Font.SourceSansBold
+    btn.Size = UDim2.new(0.9, 0, 0, 32)
+    return btn
+end
+
+-- Posicionamento dos Elementos
+NameInput.Parent = MainFrame
+NameInput.PlaceholderText = "Nick do Alvo..."
+NameInput.Size = UDim2.new(0.9, 0, 0, 30); NameInput.Position = UDim2.new(0.05, 0, 0.1, 0)
+NameInput.BackgroundColor3 = Color3.fromRGB(30, 30, 30); NameInput.TextColor3 = Color3.new(1,1,1)
+
+TagBtn.Parent = MainFrame; TagBtn.Text = "MARCAR ALVO (TAG)"
+TagBtn.Position = UDim2.new(0.05, 0, 0.17, 0)
+styleBtn(TagBtn, Color3.fromRGB(138, 43, 226))
+
+RadarBtn.Parent = MainFrame; RadarBtn.Text = "LIGAR RADAR"
+RadarBtn.Position = UDim2.new(0.05, 0, 0.24, 0)
+styleBtn(RadarBtn, Color3.fromRGB(50, 50, 50))
+
+BypassBtn.Parent = MainFrame; BypassBtn.Text = "ESCUDO VORTEX: OFF"
+BypassBtn.Position = UDim2.new(0.05, 0, 0.31, 0)
+styleBtn(BypassBtn, Color3.fromRGB(180, 0, 0))
+
+FlyBtn.Parent = MainFrame; FlyBtn.Text = "ATIVAR VOO"
+FlyBtn.Position = UDim2.new(0.05, 0, 0.38, 0)
+styleBtn(FlyBtn, Color3.fromRGB(0, 80, 200))
+
+ListFrame.Parent = MainFrame; ListFrame.Size = UDim2.new(0.9, 0, 0, 150); ListFrame.Position = UDim2.new(0.05, 0, 0.46, 0)
+ListFrame.BackgroundColor3 = Color3.fromRGB(5, 5, 5)
+Instance.new("UIListLayout", ListFrame)
+
+ClearBtn.Parent = MainFrame; ClearBtn.Text = "LIMPAR LISTA"
+ClearBtn.Position = UDim2.new(0.05, 0, 0.92, 0)
+styleBtn(ClearBtn, Color3.fromRGB(150, 0, 0))
+ClearBtn.Size = UDim2.new(0.9, 0, 0, 25)
+
+-- [ LÓGICA DE PROTEÇÃO PASSIVA ]
+local escudado = false
+BypassBtn.MouseButton1Click:Connect(function()
+    escudado = not escudado
+    BypassBtn.Text = escudado and "ESCUDO: ATIVO" or "ESCUDO VORTEX: OFF"
+    BypassBtn.BackgroundColor3 = escudado and Color3.fromRGB(0, 180, 0) or Color3.fromRGB(180, 0, 0)
+    
+    local char = game.Players.LocalPlayer.Character
+    if char and char:FindFirstChild("Humanoid") then
+        char.Humanoid.BreakJointsOnDeath = not escudado
+        char.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, not escudado)
+    end
+end)
+
+game:GetService("RunService").Heartbeat:Connect(function()
+    if escudado then
+        local char = game.Players.LocalPlayer.Character
+        local hum = char and char:FindFirstChild("Humanoid")
+        if hum then
+            if hum.Health <= 0 then hum.Health = 1 end -- Impede speed lock
+            if hum.Health < 100 then hum.Health = 100 end
+            if hum:GetState() == Enum.HumanoidStateType.Dead then
+                hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+            end
+        end
+    end
+end)
+
+-- [ RADAR ELITE INDEPENDENTE ]
+local suspeitos = {}
+RadarBtn.MouseButton1Click:Connect(function()
+    RadarBtn.Text = "BUSCANDO..."; RadarBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 0)
+    task.spawn(function()
+        while task.wait(0.5) do
+            for _, p in pairs(game.Players:GetPlayers()) do
+                if p ~= game.Players.LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                    if p.Character.HumanoidRootPart.Velocity.Magnitude > 165 and not suspeitos[p.Name] then
+                        suspeitos[p.Name] = true
+                        local l = Instance.new("TextLabel", ListFrame)
+                        l.Size = UDim2.new(1, 0, 0, 25); l.Text = " [!] " .. p.Name
+                        l.BackgroundColor3 = Color3.fromRGB(40, 0, 0); l.TextColor3 = Color3.new(1,1,1)
+                    end
+                end
+            end
+        end
+    end)
+end)
+
+-- [ FUNÇÃO DE TAG ]
+TagBtn.MouseButton1Click:Connect(function()
+    local target = NameInput.Text
+    for _, p in pairs(game.Players:GetPlayers()) do
+        if string.find(p.Name:lower(), target:lower()) and p.Character then
+            local h = p.Character:FindFirstChild("Head")
+            if h then
+                if h:FindFirstChild("VTag") then h.VTag:Destroy() end
+                local b = Instance.new("BillboardGui", h); b.Name = "VTag"; b.Size = UDim2.new(0, 200, 0, 50); b.AlwaysOnTop = true
+                local t = Instance.new("TextLabel", b); t.Size = UDim2.new(1, 0, 1, 0); t.Text = "ALVO VORTEX"
+                t.TextColor3 = Color3.new(1,0,0); t.BackgroundTransparency = 1; t.TextScaled = true; t.Font = Enum.Font.SourceSansBold
+            end
+        end
+    end
+end)
+
+ClearBtn.MouseButton1Click:Connect(function()
+    for _, c in pairs(ListFrame:GetChildren()) do if c:IsA("TextLabel") then c:Destroy() end end
+    suspeitos = {}
+end)
+
+FlyBtn.MouseButton1Click:Connect(function()
+    loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Invinicible-Flight-R15-45414"))()
+end)
